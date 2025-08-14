@@ -1,5 +1,6 @@
 
 const Prompt = require("../models/promptVault.model");
+const genrateTags = require("../services/ai.sevice");
 
 
 const createPromptController = async (req, res) => {
@@ -14,6 +15,10 @@ const createPromptController = async (req, res) => {
             });
         }
 
+        const aiTags = await genrateTags(title, description, promptText, category)
+        const aiGeneratedTags = aiTags.split(",").map(tag=>tag.trim())
+        console.log("ai generated tags : ", aiGeneratedTags);
+        
 
         const newPrompt = await Prompt.create({
             title,
@@ -21,6 +26,7 @@ const createPromptController = async (req, res) => {
             promptText,
             category,
             tags: tags || [],
+            aiGeneratedTags: aiGeneratedTags,
             userId: req.user.id,
         });
 
@@ -39,7 +45,7 @@ const createPromptController = async (req, res) => {
     }
 };
 
-const getAllPromptController = async (req, res) => {
+const searchAllPromptController = async (req, res) => {
     try {
         const { category, tags, search } = req.query;
         let filter = {}
@@ -80,6 +86,49 @@ const getAllPromptController = async (req, res) => {
 
     }
 
+}
+
+const allPromptController = async (req, res) => {
+    try {
+        const posts = await Prompt.find().sort({ createdAt: -1 })
+        
+        res.status(200).json({
+            success: true,
+            message: "all prompts",
+            count: posts.length,
+            data: posts,
+
+        })
+
+    } catch (error) {
+        res.status(400).json({
+            success: false,
+            message:"prompts cant fetch"
+        })
+    }
+}
+
+const myPromptsController = async (req, res) => {
+   try {
+       if (!req.user.id) {
+           return res.status(400).json({
+               mmessage: "User ID not found in request"
+           })
+       }
+       const posts = await Prompt.find({ userId: req.user.id }).sort({ createdAt: -1 })
+
+       res.status(200).json({
+           success: true,
+           message: "my prompts",
+           count: posts.length,
+           data: posts,
+       })
+   } catch (error) {
+       res.status(400).json({
+           success: false,
+           message: "prompts cant fetch"
+        })
+   }
 }
 
 const upadtePromptController = async (req, res) => {
@@ -145,4 +194,40 @@ const upadtePromptController = async (req, res) => {
     }
 }
 
-module.exports = { createPromptController, getAllPromptController, upadtePromptController };
+const deletePromptController = async (req, res) => {
+   try {
+       const { promptId } = req.params;
+       const userId = req.user.id;
+
+       const prompt = await Prompt.findById(promptId)
+
+       if (!prompt) {
+           return res.status(400).json({
+               success: false,
+               message: "Prompt not found"
+           })
+       }
+
+       if (prompt.userId.toString() !== userId) {
+           return res.status(401).json({
+               success: false,
+               message: "You are not authorized to delete this prompt"
+           })
+       }
+
+       await Prompt.findByIdAndDelete(promptId);
+
+       return res.status(200).json({
+           success: true,
+           message:"deleted the prompt"
+       })
+   } catch (error) {
+       res.status(400).json({
+           success: false,
+           message:"error on delete this prompt",
+        })
+   }
+
+}
+
+module.exports = { createPromptController, allPromptController, myPromptsController, searchAllPromptController, upadtePromptController, deletePromptController };
