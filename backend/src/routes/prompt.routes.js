@@ -1,5 +1,5 @@
 const express = require("express")
-const { createPromptController, getAllPromptController } = require("../controllers/prompt.controller")
+const { createPromptController, getAllPromptController, upadtePromptController } = require("../controllers/prompt.controller")
 const authMiddleware = require("../middleware/auth.middleware")
 
 
@@ -13,5 +13,11 @@ router.post("/create",
 router.get("/allPrompts",
     authMiddleware,
     getAllPromptController)
+
+
+router.patch("/:promptId",
+    authMiddleware,
+    upadtePromptController
+)
 
 module.exports = router
